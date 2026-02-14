@@ -4,6 +4,7 @@ import { motion, useScroll, useTransform, useSpring, useInView } from "framer-mo
 import SmoothScroll from "../components/SmoothScroll";
 import Image from "next/image";
 import Link from "next/link";
+import { ScanLine } from "lucide-react"; // Imported icon for the CTA button
 
 // --- UTILITY COMPONENTS ---
 
@@ -67,13 +68,30 @@ const Hero = () => {
       <div className="sticky top-0 h-screen overflow-hidden bg-[#1A1A1A]">
         <motion.div style={{ y }} className="relative w-full h-full">
           <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-80" src="https://www.pexels.com/download/video/5857696/" />
-          <div className="absolute inset-0 flex flex-col justify-center items-center text-center z-10 px-4">
+          <div className="absolute inset-0 flex flex-col justify-center items-center text-center z-10 px-4 pointer-events-none">
+            
             <h1 className="text-[13vw] leading-[0.8] font-serif text-[#FDFCF6] tracking-tight mix-blend-overlay">
               <span className="block">See food.</span>
               <span className="block">Cook smart.</span>
             </h1>
+
+            {/* --- NEW: FREE TRIAL HERO BUTTON --- */}
             <motion.div 
-               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 1 }}
+               initial={{ opacity: 0, y: 20 }} 
+               animate={{ opacity: 1, y: 0 }} 
+               transition={{ delay: 1, duration: 1 }}
+               className="mt-16 pointer-events-auto"
+            >
+               <Link href="/results" className="group relative overflow-hidden bg-[#FDFCF6] text-[#1A1A1A] px-10 py-5 rounded-full flex items-center gap-4 border-2 border-[#FDFCF6] hover:bg-transparent hover:text-[#FDFCF6] transition-colors duration-500 shadow-2xl">
+                  <ScanLine size={24} className="group-hover:scale-110 transition-transform" />
+                  <span className="font-mono text-sm md:text-base font-extrabold uppercase tracking-widest">
+                    Start Free Trial
+                  </span>
+               </Link>
+            </motion.div>
+
+            <motion.div 
+               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5, duration: 1 }}
                className="mt-12 flex flex-col items-center gap-2"
             >
                <div className="h-16 w-[1px] bg-[#FDFCF6]/50 mb-4" />
@@ -360,6 +378,12 @@ export default function Home() {
           <Link href="/" className="text-3xl md:text-5xl font-serif font-bold tracking-tight">Snap2Recipe</Link>
           
           <div className="flex items-center gap-6 md:gap-10">
+            
+            {/* --- NEW: FREE TRIAL NAV LINK --- */}
+            <Link href="/results" className="uppercase text-xs font-extrabold tracking-[0.2em] border-2 border-current px-6 py-2.5 rounded-full hover:bg-[#FDFCF6] hover:text-[#1A1A1A] transition-colors hidden lg:block">
+              Try Free
+            </Link>
+
             <Link href="/login" className="uppercase text-sm font-bold tracking-[0.2em] hover:opacity-60 transition-opacity hidden sm:block">
               Log In
             </Link>

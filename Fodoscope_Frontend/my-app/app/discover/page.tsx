@@ -41,13 +41,29 @@ export default function Discover() {
   const [minVal, setMinVal] = useState<number>(100);
   const [maxVal, setMaxVal] = useState<number>(500);
 
-  const normalizeRecipe = (r: any) => ({
-    id: r?.Recipe_id || r?._id || Math.random(),
-    title: r?.Recipe_title || r?.title || "Curated Dish",
-    calories: Math.round(r?.Calories || 0),
-    protein: Math.round(r?.['Protein (g)'] || r?.Protein || 0),
-    carbs: Math.round(r?.['Carbohydrate, by difference (g)'] || r?.Carbohydrate || 0),
-  });
+  // -----------------------------------------------------------
+  // FIXED: BULLETPROOF NORMALIZATION
+  // -----------------------------------------------------------
+  const normalizeRecipe = (r: any) => {
+    // Aggressively target Recipe_id. 
+    // We explicitly check r["Recipe_id"] to bypass any weird dot-notation quirks.
+    const targetId = 
+      r["Recipe_id"] || 
+      r.Recipe_id || 
+      r.recipe_id || 
+      r.recipeId || 
+      // If 'id' is present but it's a 24-character string (MongoDB _id), ignore it so it doesn't break the fetch
+      (r.id && String(r.id).length !== 24 ? r.id : null) || 
+      r._id; // Absolute last resort fallback
+
+    return {
+      id: String(targetId), // Cast to string to ensure it drops into the URL correctly
+      title: r?.Recipe_title || r?.title || r?.name || "Curated Dish",
+      calories: Math.round(r?.Calories || r?.calories || 0),
+      protein: Math.round(r?.['Protein (g)'] || r?.Protein || r?.protein || 0),
+      carbs: Math.round(r?.['Carbohydrate, by difference (g)'] || r?.Carbohydrate || r?.carbs || 0),
+    };
+  };
 
   useEffect(() => {
     const fetchROTD = async () => {
@@ -88,11 +104,13 @@ export default function Discover() {
     if (tab === 'carb') { setMinVal(0); setMaxVal(50); }
   };
 
-  // EXACT API CALL: Fetches specific recipe details using the ID
-  const handleRecipeClick = async (id: string) => {
+  // -----------------------------------------------------------
+  // FETCHES RECIPE DETAILS USING THE EXTRACTED ID
+  // -----------------------------------------------------------
+  const handleRecipeClick = async (Recipe_id: string) => {
     setIsRecipeLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/recipes/${id}`);
+      const res = await fetch(`http://localhost:5000/api/recipes/${Recipe_id}`);
       const data = await res.json();
       
       if (!res.ok || !data.success) throw new Error("Failed to fetch recipe");
@@ -187,11 +205,10 @@ export default function Discover() {
         </div>
       </section>
 
-      {/* --- SEARCH CONSOLE (STACKED DIRECTLY BELOW HERO) --- */}
+      {/* --- SEARCH CONSOLE --- */}
       <section className="w-full relative z-20 bg-[#FDFCF6] border-b-2 border-[#1A1A1A]">
         <div className="max-w-[95%] mx-auto px-6 md:px-12 py-16 md:py-24 flex flex-col lg:flex-row gap-16 justify-between">
           
-          {/* Left: Title & Tabs */}
           <div className="w-full lg:w-1/3">
              <RevealText>
                 <div className="flex items-center gap-4 mb-10 border-l-4 border-[#1A1A1A] pl-6">
@@ -214,7 +231,6 @@ export default function Discover() {
              </div>
           </div>
 
-          {/* Right: Inputs & Execution Button */}
           <div className="w-full lg:w-2/3 flex flex-col justify-end">
             <form onSubmit={handleSearch} className="flex flex-col sm:flex-row items-end gap-12 mb-12">
                <div className="w-full sm:w-1/2 group">
@@ -233,7 +249,7 @@ export default function Discover() {
                </div>
             </form>
 
-            <button onClick={handleSearch} disabled={isSearching} className="group relative w-full h-[90px] bg-[#1A1A1A] overflow-hidden border-2 border-[#1A1A1A] mt-auto">
+            <button onClick={handleSearch} disabled={isSearching} className="group relative w-full h-[90px] bg-[#1A1A1A] overflow-hidden border-2 border-[#1A1A1A] mt-auto cursor-pointer">
                <div className="absolute inset-0 bg-[#D48C70] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-[0.76,0,0.24,1]" />
                <div className="relative z-10 flex items-center justify-between px-8 w-full h-full text-[#FDFCF6]">
                  <span className="font-mono text-sm font-extrabold uppercase tracking-[0.2em]">
@@ -267,7 +283,6 @@ export default function Discover() {
            </div>
         )}
 
-        {/* Brutalist Numbered List */}
         <div className="flex flex-col border-t-2 border-[#1A1A1A]">
           <AnimatePresence>
             {recipes.map((recipe, idx) => (
@@ -281,7 +296,6 @@ export default function Discover() {
                 className="group cursor-pointer flex flex-col lg:flex-row lg:items-center justify-between border-b-2 border-[#1A1A1A] py-8 lg:py-12 hover:bg-[#1A1A1A] hover:text-[#FDFCF6] transition-colors duration-500 px-4 md:px-8"
               >
                  
-                 {/* Number & Title Block */}
                  <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-16 w-full lg:w-auto">
                     <span className="font-serif text-6xl md:text-7xl lg:text-8xl font-extrabold text-[#1A1A1A]/20 group-hover:text-[#FDFCF6]/40 transition-colors shrink-0 leading-none">
                       {String(idx + 1).padStart(2, '0')}
@@ -297,7 +311,6 @@ export default function Discover() {
                     </div>
                  </div>
 
-                 {/* DYNAMIC NUTRITION BLOCK (Only shows active search filter) */}
                  <div className="mt-8 lg:mt-0 flex items-center gap-8 lg:gap-16 shrink-0 border-t-2 border-[#1A1A1A]/10 lg:border-t-0 pt-6 lg:pt-0 group-hover:border-white/10 transition-colors w-full lg:w-auto">
                     
                     <div className="flex gap-8 lg:gap-12 font-mono text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">
@@ -325,12 +338,10 @@ export default function Discover() {
 
                     </div>
                     
-                    {/* Desktop Hover Arrow */}
                     <div className="hidden md:flex ml-auto opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500">
                        <ArrowRight size={40} className="text-[#D48C70]" strokeWidth={1.5} />
                     </div>
 
-                    {/* Mobile Action Link */}
                     <div className="flex md:hidden items-center justify-between w-full mt-4">
                        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#D48C70]">View Recipe</span>
                        <ArrowRight size={24} className="text-[#D48C70]" />
@@ -344,7 +355,7 @@ export default function Discover() {
         </div>
       </section>
 
-      {/* --- STATE 4: RECIPE DETAIL MODAL (PURE TYPOGRAPHIC OVERLAY) --- */}
+      {/* --- STATE 4: RECIPE DETAIL MODAL --- */}
       <AnimatePresence>
         {selectedRecipe && (
           <motion.div 
@@ -353,7 +364,6 @@ export default function Discover() {
           >
              <Grain />
              
-             {/* Modal Nav */}
              <div className="sticky top-0 w-full p-6 md:p-8 flex justify-between items-center z-50 mix-blend-difference text-[#FDFCF6]">
                 <span className="text-xl font-serif font-bold tracking-tight opacity-50">Dossier // {selectedRecipe.id}</span>
                 <button onClick={() => setSelectedRecipe(null)} className="flex items-center gap-4 group text-[10px] uppercase tracking-[0.2em] font-bold hover:opacity-70 transition-opacity cursor-pointer">
@@ -361,7 +371,6 @@ export default function Discover() {
                 </button>
              </div>
 
-             {/* Typographic Hero (No Image) */}
              <div className="w-full pt-40 pb-20 relative bg-[#1A1A1A] text-[#FDFCF6] border-b-2 border-[#1A1A1A]">
                 <div className="max-w-[95%] mx-auto px-6 md:px-12">
                    <RevealText>
@@ -380,13 +389,9 @@ export default function Discover() {
                 </div>
              </div>
 
-             {/* Modal Content - Brutalist Layout */}
              <div className="max-w-[95%] mx-auto px-6 md:px-12 py-24 flex flex-col lg:flex-row gap-16 lg:gap-24">
                 
-                {/* Left Col: Ingredients & Nutrition */}
                 <div className="w-full lg:w-1/3">
-                   
-                   {/* Nutrition Bento */}
                    <div className="border-2 border-[#1A1A1A] bg-white mb-16 flex flex-col">
                       <div className="border-b-2 border-[#1A1A1A] p-6 bg-[#1A1A1A] text-[#FDFCF6]">
                          <span className="font-mono text-[10px] font-bold uppercase tracking-widest">Nutritional Data</span>
@@ -407,7 +412,6 @@ export default function Discover() {
                       </div>
                    </div>
 
-                   {/* Ingredients List */}
                    <h3 className="font-serif text-4xl mb-8">Components</h3>
                    <ul className="flex flex-col border-t-2 border-[#1A1A1A]">
                       {selectedRecipe.ingredients?.map((ing: any, i: number) => (
@@ -421,7 +425,6 @@ export default function Discover() {
                    </ul>
                 </div>
 
-                {/* Right Col: Instructions */}
                 <div className="w-full lg:w-2/3">
                    <h3 className="font-serif text-5xl mb-12">Execution</h3>
                    <div className="flex flex-col gap-12 border-t-2 border-[#1A1A1A] pt-12">
@@ -445,7 +448,6 @@ export default function Discover() {
         )}
       </AnimatePresence>
 
-      {/* Global Loading Overlay for Recipe Fetch */}
       <AnimatePresence>
          {isRecipeLoading && (
             <motion.div 

@@ -1,10 +1,10 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // Added useRouter
-import { ArrowLeft, ArrowRight, Loader2, ScanLine, X, Flame, ChefHat, Clock, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowRight, Loader2, ScanLine, X, Flame, ChefHat, Clock, Check, Lock, Unlock } from "lucide-react";
 
 // --- CUSTOM ANIMATION CURVE ---
 const ease = [0.76, 0, 0.24, 1];
@@ -15,8 +15,8 @@ const Grain = () => (
        style={{ backgroundImage: 'url("https://framerusercontent.com/images/rR6HYXBrMmX4cRpXfXUOvpvpB0.png")' }} />
 );
 
-const RevealText = ({ children, delay = 0 }: { children: React.ReactNode, delay?: number }) => (
-  <div className="overflow-hidden py-1">
+const RevealText = ({ children, delay = 0, className = "" }: { children: React.ReactNode, delay?: number, className?: string }) => (
+  <div className={`overflow-hidden py-1 ${className}`}>
     <motion.div
       initial={{ y: "120%", opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
@@ -28,65 +28,177 @@ const RevealText = ({ children, delay = 0 }: { children: React.ReactNode, delay?
   </div>
 );
 
+// --- BRUTALIST ACCESS MODAL (PAYWALL) ---
+const AccessModal = ({ onClose }: { onClose: () => void }) => {
+  const router = useRouter();
+  
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-[#1A1A1A]/90 backdrop-blur-md p-4"
+    >
+      <motion.div 
+        initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }}
+        className="bg-[#FDFCF6] w-full max-w-2xl border-2 border-[#1A1A1A] overflow-hidden flex flex-col shadow-2xl relative"
+      >
+        <button onClick={onClose} className="absolute top-6 right-6 text-[#1A1A1A] hover:text-[#D48C70] transition-colors z-10 cursor-pointer">
+           <X size={28} />
+        </button>
+        
+        <div className="p-12 md:p-16 border-b-2 border-[#1A1A1A] bg-[#1A1A1A] text-[#FDFCF6] relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-64 h-64 border-4 border-white/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+           <span className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] opacity-50 mb-6 flex items-center gap-3">
+             <Lock size={12} /> System Locked
+           </span>
+           <h2 className="text-5xl md:text-6xl font-serif tracking-tight leading-none">
+             Trial Allowance<br/><span className="italic text-[#D48C70]">Expended.</span>
+           </h2>
+        </div>
+        
+        <div className="p-12 md:p-16 flex flex-col">
+           <p className="text-xl font-light leading-relaxed mb-12 opacity-80 max-w-md text-[#1A1A1A]">
+             You have reached the limit for anonymous dossier retrieval. Authenticate your identity to unlock unlimited nutritional data and AI meal generation.
+           </p>
+           
+           <div className="flex flex-col sm:flex-row gap-6">
+              <button onClick={() => router.push("/signup")} className="group relative flex-grow h-16 bg-[#1A1A1A] overflow-hidden border-2 border-[#1A1A1A] cursor-pointer">
+                 <div className="absolute inset-0 bg-[#D48C70] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-[0.76,0,0.24,1]" />
+                 <div className="relative z-10 flex items-center justify-between px-8 w-full h-full text-[#FDFCF6]">
+                   <span className="font-mono text-xs font-extrabold uppercase tracking-[0.2em]">Create Account</span>
+                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                 </div>
+              </button>
+              
+              <button onClick={() => router.push("/login")} className="group flex-grow sm:flex-grow-0 sm:w-1/3 h-16 flex items-center justify-center border-2 border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-[#FDFCF6] transition-colors duration-300 cursor-pointer">
+                 <span className="font-mono text-xs font-extrabold uppercase tracking-[0.2em]">Log In</span>
+              </button>
+           </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 // --- MAIN PAGE COMPONENT ---
-export default function Analyze() {
-  const router = useRouter(); // Initialize router
+export default function FreemiumAnalyze() {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
-  const [status, setStatus] = useState<'idle' | 'analyzing' | 'results' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'analyzing' | 'results'>('idle');
   const [analysisData, setAnalysisData] = useState<any>(null);
+  const [backendError, setBackendError] = useState<string | null>(null);
   
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
   const [isRecipeLoading, setIsRecipeLoading] = useState(false);
+  
+  // --- BACKEND-DRIVEN FREEMIUM STATE ---
+  const [trialsRemaining, setTrialsRemaining] = useState<number>(3);
+  const [totalTrialsUsed, setTotalTrialsUsed] = useState<number>(0);
+  const [isLocked, setIsLocked] = useState<boolean>(false);
+  const [showPaywall, setShowPaywall] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Handle File Selection
+  // Bulletproof Recipe Normalizer
+  const normalizeRecipe = (r: any) => {
+    const targetId = r["Recipe_id"] || r.Recipe_id || r.recipe_id || r.recipeId || (r.id && String(r.id).length !== 24 ? r.id : null) || r._id;
+    return {
+      id: String(targetId),
+      title: r?.Recipe_title || r?.title || r?.name || "Curated Dish",
+      calories: Math.round(r?.Calories || r?.calories || 0),
+      protein: Math.round(r?.['Protein (g)'] || r?.Protein || r?.protein || 0),
+      carbs: Math.round(r?.['Carbohydrate, by difference (g)'] || r?.Carbohydrate || r?.carbs || 0),
+    };
+  };
+
+  // 1. Fetch Trial Status from Backend on Mount
+  const fetchTrialStatus = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const headers: any = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("http://localhost:5000/api/trials/status", {
+        method: "GET",
+        headers,
+        credentials: "include", // CRITICAL: Allows backend to read/set the guestId cookie
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setTrialsRemaining(data.data.trialsRemaining);
+        setTotalTrialsUsed(data.data.totalTrialsUsed);
+        setIsLocked(!data.data.hasTrials);
+      }
+    } catch (err) {
+      console.error("Failed to sync trial status with server.", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrialStatus();
+  }, []);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
+      setBackendError(null);
     }
   };
 
-  // 2. Upload and Analyze
+  // 2. Execute Analysis
   const handleAnalyze = async () => {
     if (!file) return;
+
     setStatus('analyzing');
+    setBackendError(null);
     
     try {
       const token = localStorage.getItem("accessToken");
+      const headers: any = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const formData = new FormData();
       formData.append("image", file);
 
       const res = await fetch("http://localhost:5000/api/ai/analyze", {
         method: "POST",
-        headers: token ? { "Authorization": `Bearer ${token}` } : {},
+        headers,
         body: formData,
+        credentials: "include", // CRITICAL: Sends the cookie so backend decrements the trial
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.message || "Analysis failed");
 
-      setAnalysisData(data.data);
+      const normalizedRecipes = data.data.pairingBasedRecipes.map((r: any) => normalizeRecipe(r));
+      
+      setAnalysisData({
+        ...data.data,
+        pairingBasedRecipes: normalizedRecipes
+      });
+
+      // Fetch the updated status from the backend to instantly update the UI meter
+      await fetchTrialStatus();
+
       setStatus('results');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setStatus('error');
+      setBackendError(err.message || "The intelligence system encountered an error.");
+      setStatus('idle');
     }
   };
 
-  // 3. Fetch Specific Recipe Details
-  const handleRecipeClick = async (id: string) => {
+  const handleRecipeClick = async (Recipe_id: string) => {
     setIsRecipeLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/recipes/${id}`);
+      const res = await fetch(`http://localhost:5000/api/recipes/${Recipe_id}`);
       const data = await res.json();
-      
       if (!res.ok || !data.success) throw new Error("Failed to fetch recipe");
-
       setSelectedRecipe(data.data);
     } catch (err) {
       console.error(err);
@@ -96,16 +208,23 @@ export default function Analyze() {
     }
   };
 
+  // Calculate percentage for the brutalist meter
+  const totalAllocatedTrials = totalTrialsUsed + trialsRemaining;
+  const progressPercentage = totalAllocatedTrials > 0 ? (totalTrialsUsed / totalAllocatedTrials) * 100 : 0;
+
   return (
-    <main className="min-h-screen bg-[#FDFCF6] text-[#1A1A1A] selection:bg-[#1A1A1A] selection:text-[#FDFCF6] pb-32">
+    <main className="min-h-screen bg-[#FDFCF6] text-[#1A1A1A] selection:bg-[#1A1A1A] selection:text-[#FDFCF6] pb-32 font-sans">
       <Grain />
+
+      <AnimatePresence>
+        {showPaywall && <AccessModal onClose={() => setShowPaywall(false)} />}
+      </AnimatePresence>
 
       {/* --- NAV --- */}
       <nav className="fixed top-0 w-full p-6 md:p-8 flex justify-between items-center z-40 mix-blend-difference text-[#FDFCF6]">
-        {/* FIXED: Uses router.back() instead of hard linking to "/" */}
-        <button onClick={() => router.back()} className="flex items-center gap-4 group text-[10px] uppercase tracking-[0.2em] font-bold hover:opacity-70 transition-opacity cursor-pointer">
+        <Link href="/" className="flex items-center gap-4 group text-[10px] uppercase tracking-[0.2em] font-bold hover:opacity-70 transition-opacity">
           <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" /> Return
-        </button>
+        </Link>
         <span className="text-2xl font-serif font-bold tracking-tight">Snap2Recipe</span>
       </nav>
 
@@ -119,7 +238,7 @@ export default function Analyze() {
           </RevealText>
 
           <div className="flex flex-col lg:flex-row gap-16 flex-grow">
-             {/* Upload Box */}
+             {/* Left: Upload Box */}
              <div className="w-full lg:w-1/2">
                 <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileSelect} />
                 
@@ -133,7 +252,7 @@ export default function Analyze() {
                      <>
                        <Image src={previewUrl} alt="Preview" fill className="object-cover opacity-60 group-hover:opacity-40 transition-opacity duration-500" unoptimized />
                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                          <span className="bg-[#1A1A1A] text-[#FDFCF6] px-6 py-3 font-mono text-[10px] uppercase tracking-widest font-bold">Change Image</span>
+                          <span className="bg-[#1A1A1A] text-[#FDFCF6] px-6 py-3 font-mono text-[10px] font-bold uppercase tracking-widest shadow-2xl">Change Image</span>
                        </div>
                      </>
                    ) : (
@@ -146,23 +265,66 @@ export default function Analyze() {
                 </div>
              </div>
 
-             {/* Action Console */}
+             {/* Right: Action Console & Trial Tracker */}
              <div className="w-full lg:w-1/2 flex flex-col justify-end pb-8">
+                
                 <p className="font-serif text-3xl md:text-4xl leading-tight opacity-80 mb-12">
                    Provide an image of your ingredients or current meal. Our intelligence system will detect the components and generate hyper-optimized flavor pairings.
                 </p>
 
+                {/* --- BRUTALIST TRIAL TRACKER --- */}
+                <div className={`mb-8 border-2 border-[#1A1A1A] p-6 shadow-xl transition-colors duration-500 ${isLocked ? 'bg-[#1A1A1A] text-[#FDFCF6]' : 'bg-white text-[#1A1A1A]'}`}>
+                  <div className="flex justify-between items-center mb-6">
+                     <span className="font-mono text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                        {isLocked ? <Lock size={14} className="text-[#D48C70]" /> : <Unlock size={14} className="opacity-50" />}
+                        Guest Access Tracker
+                     </span>
+                     <span className="font-serif text-3xl font-bold">
+                        {trialsRemaining} <span className="text-lg opacity-50 font-sans tracking-normal">left</span>
+                     </span>
+                  </div>
+                  
+                  {/* Progress Bar driven by backend data */}
+                  <div className={`w-full h-3 rounded-full overflow-hidden flex relative ${isLocked ? 'bg-white/10' : 'bg-[#1A1A1A]/10'}`}>
+                     <motion.div 
+                       className={`h-full z-10 relative ${isLocked ? 'bg-[#D48C70]' : 'bg-[#1A1A1A]'}`} 
+                       initial={{ width: 0 }} 
+                       animate={{ width: `${progressPercentage}%` }} 
+                       transition={{ duration: 1, ease }}
+                     />
+                  </div>
+                  {isLocked && (
+                     <p className="mt-6 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#D48C70] flex items-center gap-2">
+                       Allowance Expended. Authentication Required.
+                     </p>
+                  )}
+                </div>
+
+                {backendError && (
+                  <div className="mb-8 border-l-4 border-[#D48C70] bg-[#D48C70]/10 p-4">
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#D48C70]">Error: {backendError}</span>
+                  </div>
+                )}
+
+                {/* Dynamic Execute Button */}
                 <button 
-                  onClick={handleAnalyze}
-                  disabled={!file}
-                  className="group relative w-full h-[80px] bg-[#1A1A1A] overflow-hidden disabled:opacity-30 disabled:cursor-not-allowed"
+                  onClick={isLocked ? () => router.push("/signup") : handleAnalyze}
+                  disabled={!file && !isLocked} // If locked, allow click to trigger redirect regardless of file
+                  className={`group relative w-full h-[90px] overflow-hidden border-2 cursor-pointer
+                    ${isLocked ? 'border-[#D48C70] bg-[#D48C70]' : 'border-[#1A1A1A] bg-[#1A1A1A] disabled:opacity-30 disabled:cursor-not-allowed'}
+                  `}
                 >
-                  <div className="absolute inset-0 bg-[#C26D5C] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-[0.76,0,0.24,1]" />
-                  <div className="relative z-10 flex items-center justify-between px-8 w-full h-full text-[#FDFCF6]">
-                    <span className="font-mono text-sm uppercase tracking-[0.2em] font-bold">
-                      Execute Analysis
+                  <div className={`absolute inset-0 origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-[0.76,0,0.24,1]
+                    ${isLocked ? 'bg-[#1A1A1A]' : 'bg-[#D48C70]'}
+                  `} />
+                  <div className={`relative z-10 flex items-center justify-between px-8 w-full h-full ${isLocked ? 'text-[#1A1A1A] group-hover:text-[#FDFCF6]' : 'text-[#FDFCF6]'}`}>
+                    <span className="font-mono text-sm font-extrabold uppercase tracking-[0.2em]">
+                      {isLocked ? "Unlock Full Access" : "Execute Analysis"}
                     </span>
-                    <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform duration-500" />
+                    {isLocked 
+                      ? <Lock size={24} className="group-hover:translate-x-1 transition-transform" />
+                      : <ScanLine size={24} className="group-hover:scale-110 transition-transform" />
+                    }
                   </div>
                 </button>
              </div>
@@ -176,12 +338,10 @@ export default function Analyze() {
            <div className="relative w-64 h-64 md:w-96 md:h-96 mb-12">
               {previewUrl && <Image src={previewUrl} alt="Scanning" fill className="object-cover grayscale opacity-30" unoptimized />}
               
-              {/* Laser Scan Animation */}
               <motion.div 
                 animate={{ top: ["0%", "100%", "0%"] }} transition={{ duration: 3, ease: "linear", repeat: Infinity }}
                 className="absolute left-0 w-full h-[2px] bg-[#D48C70] shadow-[0_0_20px_#D48C70] z-10"
               />
-              {/* Corner brackets */}
               <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[#1A1A1A]" />
               <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#1A1A1A]" />
               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#1A1A1A]" />
@@ -193,11 +353,11 @@ export default function Analyze() {
         </section>
       )}
 
-      {/* --- STATE 3: RESULTS (STRUCTURED LIST) --- */}
+      {/* --- STATE 3: RESULTS (PURE TYPOGRAPHIC GRID) --- */}
       {status === 'results' && analysisData && (
         <section className="pt-32 px-6 md:px-12 max-w-[95%] mx-auto animate-in fade-in duration-1000">
            
-           <div className="flex flex-col lg:flex-row gap-16 lg:gap-24 mb-24">
+           <div className="flex flex-col lg:flex-row gap-16 lg:gap-24 mb-24 border-b-2 border-[#1A1A1A] pb-16">
              {/* Left: Original Image & Data */}
              <div className="w-full lg:w-1/3">
                 <RevealText>
@@ -230,7 +390,7 @@ export default function Analyze() {
                 </div>
              </div>
 
-             {/* Right: Numbered Recipe List */}
+             {/* Right: Brutalist Typographic List (No Thumbnails) */}
              <div className="w-full lg:w-2/3">
                 <RevealText delay={0.2}>
                   <h2 className="text-5xl md:text-7xl font-serif tracking-tighter leading-none mb-16">
@@ -238,7 +398,6 @@ export default function Analyze() {
                   </h2>
                 </RevealText>
 
-                {/* Structured Brutalist List */}
                 <div className="flex flex-col border-t-2 border-[#1A1A1A]">
                    {analysisData.pairingBasedRecipes.map((recipe: any, i: number) => (
                       <motion.div 
@@ -256,15 +415,15 @@ export default function Analyze() {
                             {/* Meta & Title */}
                             <div>
                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest opacity-60 block mb-2">
-                                 ID // {recipe.id}
+                                 ID // {String(recipe.id).slice(0,8)}
                                </span>
                                <h3 className="text-3xl md:text-4xl font-serif leading-tight tracking-tight group-hover:text-[#D48C70] transition-colors">
-                                 {recipe.name}
+                                 {recipe.title}
                                </h3>
                             </div>
                          </div>
 
-                         {/* Call to Action Arrow */}
+                         {/* Action Arrow */}
                          <div className="mt-8 md:mt-0 flex shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
                             <div className="font-mono text-xs font-bold uppercase tracking-widest flex items-center gap-4">
                                View Dossier <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" />
@@ -278,7 +437,7 @@ export default function Analyze() {
         </section>
       )}
 
-      {/* --- STATE 4: RECIPE DETAIL MODAL (PURE TYPOGRAPHIC OVERLAY) --- */}
+      {/* --- STATE 4: RECIPE DETAIL MODAL (PURE TYPOGRAPHIC) --- */}
       <AnimatePresence>
         {selectedRecipe && (
           <motion.div 
@@ -295,7 +454,7 @@ export default function Analyze() {
                 </button>
              </div>
 
-             {/* Typographic Hero (No Image) */}
+             {/* Typographic Hero */}
              <div className="w-full pt-40 pb-20 relative bg-[#1A1A1A] text-[#FDFCF6] border-b-2 border-[#1A1A1A]">
                 <div className="max-w-[95%] mx-auto px-6 md:px-12">
                    <RevealText>
@@ -314,13 +473,9 @@ export default function Analyze() {
                 </div>
              </div>
 
-             {/* Modal Content - Brutalist Layout */}
+             {/* Brutalist Layout Details */}
              <div className="max-w-[95%] mx-auto px-6 md:px-12 py-24 flex flex-col lg:flex-row gap-16 lg:gap-24">
-                
-                {/* Left Col: Ingredients & Nutrition */}
                 <div className="w-full lg:w-1/3">
-                   
-                   {/* Nutrition Bento */}
                    <div className="border-2 border-[#1A1A1A] bg-white mb-16 flex flex-col">
                       <div className="border-b-2 border-[#1A1A1A] p-6 bg-[#1A1A1A] text-[#FDFCF6]">
                          <span className="font-mono text-[10px] font-bold uppercase tracking-widest">Nutritional Data</span>
@@ -341,7 +496,6 @@ export default function Analyze() {
                       </div>
                    </div>
 
-                   {/* Ingredients List */}
                    <h3 className="font-serif text-4xl mb-8">Components</h3>
                    <ul className="flex flex-col border-t-2 border-[#1A1A1A]">
                       {selectedRecipe.ingredients?.map((ing: any, i: number) => (
@@ -355,7 +509,6 @@ export default function Analyze() {
                    </ul>
                 </div>
 
-                {/* Right Col: Instructions */}
                 <div className="w-full lg:w-2/3">
                    <h3 className="font-serif text-5xl mb-12">Execution</h3>
                    <div className="flex flex-col gap-12 border-t-2 border-[#1A1A1A] pt-12">
@@ -373,13 +526,11 @@ export default function Analyze() {
                       ))}
                    </div>
                 </div>
-
              </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Global Loading Overlay for Recipe Fetch */}
       <AnimatePresence>
          {isRecipeLoading && (
             <motion.div 
