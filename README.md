@@ -23,8 +23,7 @@ You can access the deployed services here:
 
 - **Frontend:** https://your-frontend-link.com  
 - **Backend API:** https://your-backend-link.com  
-- **ML Model Service:** https://your-ml-service-link.com  
-
+- **ML Model Service:** https://ri-s-hu007-yolo-vegetable-api.hf.space/
 ## Tech Stack  
 
 <p align="center">
@@ -32,7 +31,51 @@ You can access the deployed services here:
 </p>
 
 ---
+## 📂 Project Structure
 
+The project is organized into three main components:
+
+```text
+Codex/
+├── AI/                         # Python FastAPI service & YOLOv8 model
+│   ├── main.py
+│   ├── requirements.txt
+│   └── best (4).pt
+│
+├── Fodoscope_Backend/          # Node.js Express backend
+│   ├── src/
+│   │   ├── config/
+│   │   ├── controllers/        # Business logic
+│   │   │   ├── aiController.js
+│   │   │   ├── authController.js
+│   │   │   ├── recipeController.js
+│   │   │   └── trialController.js
+│   │   ├── middleware/
+│   │   ├── models/             # Database schemas
+│   │   │   ├── GuestSession.js
+│   │   │   └── User.js
+│   │   ├── routes/             # API routes
+│   │   │   ├── aiRoutes.js
+│   │   │   ├── authRoutes.js
+│   │   │   ├── recipeRoutes.js
+│   │   │   └── trialRoutes.js
+│   │   ├── app.js
+│   │   └── ...
+│   └── server.js
+│
+└── Fodoscope_Frontend/         # Next.js frontend
+    └── my-app/
+        ├── app/
+        │   ├── api/
+        │   ├── discover/
+        │   ├── login/
+        │   ├── signup/
+        │   ├── layout.tsx
+        │   └── page.tsx
+        ├── components/
+        ├── public/
+        └── ...
+```
 ## How It Works  
 
 1. The user uploads an image or provides an image URL.  
@@ -50,3 +93,4 @@ You can access the deployed services here:
 - Nutrition and diet platforms  
 - Food technology research  
 - Educational cooking applications
+
