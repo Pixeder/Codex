@@ -1,12 +1,12 @@
 const axios = require("axios");
-const ApiError = require("../utils/ApiError.js");
+const FormData = require("form-data");
+const ApiError = require("../utils/ApiError");
 
 const MODEL_URL = process.env.ML_MODEL_URL;
 
 /**
- * analyzeWithAI
- * Sends imageUrl to Python ML model
- * Returns array of detected object names
+ * Send imageUrl to Python ML model
+ * Return array of detected class names
  */
 const analyzeWithAI = async (imageUrl) => {
   try {
@@ -14,23 +14,35 @@ const analyzeWithAI = async (imageUrl) => {
       throw new ApiError(500, "ML_MODEL_URL not configured");
     }
 
-    // Send POST request to Python model
-    const response = await axios.post(MODEL_URL, {
-      image_url: imageUrl,   // make sure Python expects this field
+    // Send as form-data (for FastAPI)
+    const formData = new FormData();
+    formData.append("image_url", imageUrl);
+
+    const response = await axios.post(MODEL_URL, formData, {
+      headers: {
+        ...formData.getHeaders(),
+      },
+      timeout: 20000,
     });
 
     const data = response.data;
 
+    // Validate response
     if (!data || !Array.isArray(data.detections)) {
+      console.error("Invalid Model Response:", data);
       throw new ApiError(500, "Invalid response from ML model");
     }
 
-    // Extract class names from detections
-    const detectedObjects = data.detections.map(
-      (item) => item.class?.name
-    ).filter(Boolean);
+    // Extract class names
+    const detectedObjects = data.detections
+      .map((item) => item.class)
+      .filter(Boolean);
 
-    return detectedObjects;
+    return {
+      imageSource: data.image_source,
+      totalDetections: data.total_detections,
+      detections: detectedObjects,
+    };
 
   } catch (error) {
     console.error("ML Model Error:", error.message);
