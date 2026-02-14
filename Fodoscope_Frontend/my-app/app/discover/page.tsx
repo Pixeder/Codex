@@ -41,7 +41,7 @@ const RevealText = ({
     <motion.div
       initial={{ y: "120%", opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 1, ease, delay }}
+      transition={{ duration: 1, ease: "easeOut", delay }}
       className="origin-bottom-left"
     >
       {children}
@@ -191,7 +191,7 @@ export default function Discover() {
         <motion.div
           initial={{ filter: "blur(20px)", scale: 1.1, opacity: 0 }}
           animate={{ filter: "blur(0px)", scale: 1, opacity: 0.5 }}
-          transition={{ duration: 2.5, ease }}
+          transition={{ duration: 2.5, ease: "easeOut" }}
           className="absolute inset-0 w-full h-full pointer-events-none"
         >
           <video
@@ -386,7 +386,7 @@ export default function Discover() {
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: "-5%" }}
-                transition={{ duration: 0.6, delay: (idx % 10) * 0.05, ease }}
+                transition={{ duration: 0.6, delay: (idx % 10) * 0.05, ease: "easeOut" }}
                 onClick={() => handleRecipeClick(recipe.id)}
                 className="group cursor-pointer flex flex-col lg:flex-row lg:items-center justify-between border-b-2 border-[#1A1A1A] py-8 lg:py-12 hover:bg-[#1A1A1A] hover:text-[#FDFCF6] transition-colors duration-500 px-4 md:px-8"
               >
@@ -476,7 +476,7 @@ export default function Discover() {
             initial={{ y: "100%" }}
             animate={{ y: "0%" }}
             exit={{ y: "100%" }}
-            transition={{ duration: 0.8, ease }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
             className="fixed inset-0 z-[100] bg-[#FDFCF6] overflow-y-auto"
           >
             <Grain />

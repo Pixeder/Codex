@@ -64,7 +64,7 @@ const RevealText = ({
     <motion.div
       initial={{ y: "120%", opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 1, ease, delay }}
+      transition={{ duration: 1, ease: "easeOut", delay }}
       className="origin-bottom-left"
     >
       {children}
@@ -182,7 +182,7 @@ export default function Profile() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
           className="w-full border-2 border-[#1A1A1A] flex flex-col lg:flex-row bg-white shadow-xl"
         >
           {/* COLUMN 1: IDENTITY (Left Side) */}
@@ -295,7 +295,7 @@ export default function Profile() {
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${usedPercentage}%` }}
-                  transition={{ duration: 1.5, ease, delay: 0.2 }}
+                  transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
                   className="h-full bg-[#1A1A1A] relative z-10 border-r-2 border-[#1A1A1A]"
                 />
                 <div className="h-full bg-[#A8B545] flex-grow opacity-50" />
