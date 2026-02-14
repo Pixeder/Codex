@@ -21,8 +21,8 @@ The project is organized into three main components:
 
 You can access the deployed services here:
 
-- **Frontend:** https://your-frontend-link.com  
-- **Backend API:** https://your-backend-link.com  
+- **Frontend:** https://codex-e42o.vercel.app/  
+- **Backend API:** https://codex-sk6m.onrender.com/api/health
 - **ML Model Service:** https://ri-s-hu007-yolo-vegetable-api.hf.space/
 ## Tech Stack  
 
@@ -93,4 +93,5 @@ Codex/
 - Nutrition and diet platforms  
 - Food technology research  
 - Educational cooking applications
+
 
