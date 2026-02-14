@@ -3,11 +3,11 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const path = require("path");
 
-const authRoutes   = require("./routes/authRoutes");
-// const aiRoutes     = require("./routes/aiRoutes");
+const authRoutes   = require("./routes/authRoutes.js");
+const aiRouter     = require("./routes/aiRoutes.js");
 // const recipeRoutes = require("./routes/recipeRoutes");
-const trialRoutes  = require("./routes/trialRoutes");
-const ApiError     = require("./utils/ApiError");
+const trialRoutes  = require("./routes/trialRoutes.js");
+const ApiError     = require("./utils/ApiError.js");
 
 const app = express();
 
@@ -46,7 +46,7 @@ app.get("/api/health", (req, res) => {
 // API Routes
 // ─────────────────────────────────────────────
 app.use("/api/auth",    authRoutes);
-// app.use("/api/ai",      aiRoutes);
+app.use("/api/ai",      aiRouter);
 // app.use("/api/recipes", recipeRoutes);
 app.use("/api/trials",  trialRoutes);
 
