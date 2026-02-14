@@ -1,6 +1,7 @@
 const ApiResponse = require("../utils/ApiResponse");
 const { analyzeWithAI } = require("../services/aiService");
 const { getRecipesFromDetections } = require("../services/reciepeService");
+const { rankRecipesByFlavorPairing} = require("../services/flavorService.js")
 
 const analyzeFood = async (req, res) => {
   const imageUrl = req.imageUrl;
@@ -30,7 +31,7 @@ const analyzeFood = async (req, res) => {
   console.log(response)
   return res.status(200).json(
     new ApiResponse(200, "Image analyzed successfully", {
-      detectedIngredients: detected,
+      detectedIngredients: aiResult.detections,
       pairingBasedRecipes: rankedRecipes.slice(0, 3),
     })
   );
