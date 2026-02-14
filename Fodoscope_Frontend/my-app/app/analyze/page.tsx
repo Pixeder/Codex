@@ -40,7 +40,7 @@ const RevealText = ({
     <motion.div
       initial={{ y: "120%", opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 1, ease, delay }}
+      transition={{ duration: 1, ease: "easeOut", delay }}
       className="origin-bottom-left"
     >
       {children}
@@ -308,7 +308,7 @@ export default function Analyze() {
                     <motion.span
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.2 + i * 0.05, ease }}
+                      transition={{ delay: 0.2 + i * 0.05, ease:"easeOut" }}
                       key={i}
                       className="border border-[#1A1A1A] px-4 py-2 font-mono text-[10px] uppercase tracking-widest bg-white font-bold"
                     >
@@ -336,7 +336,7 @@ export default function Analyze() {
                       key={recipe.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + i * 0.1, ease }}
+                      transition={{ delay: 0.4 + i * 0.1, ease: "easeOut" }}
                       onClick={() => handleRecipeClick(recipe.id)}
                       className="group cursor-pointer flex flex-col md:flex-row md:items-center justify-between border-b-2 border-[#1A1A1A] py-8 hover:bg-[#1A1A1A] hover:text-[#FDFCF6] transition-colors duration-500 px-4 md:px-8"
                     >
@@ -383,7 +383,7 @@ export default function Analyze() {
             initial={{ y: "100%" }}
             animate={{ y: "0%" }}
             exit={{ y: "100%" }}
-            transition={{ duration: 0.8, ease }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
             className="fixed inset-0 z-[100] bg-[#FDFCF6] overflow-y-auto"
           >
             <Grain />
